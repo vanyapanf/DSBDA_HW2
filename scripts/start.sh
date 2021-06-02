@@ -4,6 +4,12 @@ if [[ $# -eq 0 ]] ; then
     exit 1
 fi
 
+if [[ $# -eq 1 ]] ; then
+    echo 'You should specify gendata size!'
+    exit 1
+fi
+echo $1
+echo $2
 
 export PATH=$PATH:/usr/local/hadoop/bin/
 hadoop dfs -rm -r logs
@@ -17,21 +23,52 @@ sudo service postgresql start
 sudo -u postgres psql -c 'ALTER USER postgres PASSWORD '\''1234'\'';'
 sudo -u postgres psql -c 'drop database if exists '"$1"';'
 sudo -u postgres psql -c 'create database '"$1"';'
-sudo -u postgres -H -- psql -d $1 -c 'CREATE TABLE logging (id BIGSERIAL PRIMARY KEY, logLevel int, datetime VARCHAR(20), other VARCHAR(256));'
+sudo -u postgres -H -- psql -d $1 -c 'CREATE TABLE logging (id BIGSERIAL PRIMARY KEY, datetime VARCHAR(50), area VARCHAR(50), sensortype VARCHAR(50), sensorvalue INT);'
 
 # Генерируем входные данные и добавляем их в таблицу
-POSTFIX=("fccd8a5f3a42,rsyslogd-2007:,action -action 9- suspended, next retry is Fri Oct 26 13:54:37 2018 [v8.16.0 try http://www.rsyslog.com/e/2007 ]"
-        "fccd8a5f3a42,rsyslogd:,rsyslogds userid changed to 107")
-for i in {1..200}
+for i in `seq $2`
 	do
+	    DATE=$(date '+%d.%m.%Y')
 	    HOUR=$((RANDOM % 24))
-	    if [ $HOUR -le 9 ]; then
-	        TWO_DIGIT_HOUR="0$HOUR"
-	    else
-	        TWO_DIGIT_HOUR="$HOUR"
+	    if [ $HOUR -lt 10 ]
+	    then
+	      HOUR=0$HOUR
 	    fi
-		sudo -u postgres -H -- psql -d $1 -c 'INSERT INTO logging (logLevel, datetime, other) values ('"$((RANDOM % 8))"','\''Nov 10 '"$TWO_DIGIT_HOUR"':13:56'\'','\'"${POSTFIX[$((RANDOM % ${#POSTFIX[*]}))]}"''\'');'
-	done
+	    MINUTE=$((RANDOM % 60))
+	    if [ $MINUTE -lt 10 ]
+	    then
+	      MINUTE=0$MINUTE
+	    fi
+	    SECOND=$((RANDOM % 60))
+	    if [ $SECOND -lt 10 ]
+	    then
+	      SECOND=0$SECOND
+	    fi
+	    MILLISECONDS=$((RANDOM % 1000))
+	    if [ $MILLISECONDS -lt 10 ]
+	    then
+	      MILLISECONDS=00$MILLISECONDS
+	    elif [ $MILLISECONDS -lt 100 ]
+	    then
+	        MILLISECONDS=0$MILLISECONDS
+	    fi
+	    AREA=$((RANDOM % 10))
+	    SENSORNUMBER=$((RANDOM % 100))
+	    case $((RANDOM % 3)) in
+	         0)
+	          SENSORTYPE="temp"
+	          ;;
+	         1)
+	          SENSORTYPE="pres"
+	          ;;
+	         *)
+	          SENSORTYPE="hum"
+	          ;;
+	    esac
+	    SENSORVALUE=$((RANDOM % 1000))
+	    sudo -u postgres -H -- psql -d $1 -c 'INSERT INTO logging (datetime, area, sensortype, sensorvalue) values ('\'"$DATE"' '"$HOUR"':'"$MINUTE"':'"$SECOND"'.'"$MILLISECONDS"\'','\''area'"$AREA"\'','\''sensor'"$SENSORNUMBER"'_'"$SENSORTYPE"\'','"$SENSORVALUE"');'
+      echo ''\'"$DATE"' '"$HOUR"':'"$MINUTE"':'"$SECOND"'.'"$MILLISECONDS"\'','\''area'"$AREA"\'','\''sensor'"$SENSORNUMBER"'_'"$SENSORTYPE"\'','"$SENSORVALUE"''
+  done
 
 # Скачиваем SQOOP
 if [ ! -f sqoop-1.4.7.bin__hadoop-2.6.0.tar.gz ]; then

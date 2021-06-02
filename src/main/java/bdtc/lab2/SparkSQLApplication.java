@@ -8,7 +8,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
 /**
- * Считает количество событий syslog разного уровная log level по часам.
+ * Считает средние за час значения температуры, влажности, давления, получаемые с датчиков.
  */
 @Slf4j
 public class SparkSQLApplication {
@@ -31,7 +31,7 @@ public class SparkSQLApplication {
 
         Dataset<String> df = sc.read().text(args[0]).as(Encoders.STRING());
         log.info("===============COUNTING...================");
-        JavaRDD<Row> result = LogLevelEventCounter.countLogLevelPerHour(df);
+        JavaRDD<Row> result = WeatherFactorsCounter.countWeatherFactors(df);
         log.info("============SAVING FILE TO " + args[1] + " directory============");
         result.saveAsTextFile(args[1]);
     }

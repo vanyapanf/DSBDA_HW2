@@ -5,11 +5,12 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class LogLevelHour {
+public class CountWeatherFactor {
+    String datetime;
 
-    // Уровень логирования
-    private String logLevel;
+    String area;
 
-    // Час, в который произошло событие
-    private int hour;
+    String type;
+
+    int sensorvalue;
 }
